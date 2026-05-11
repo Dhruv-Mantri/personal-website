@@ -446,7 +446,7 @@ img { max-width: 100%; }
    EXPERIENCE (Sticky Space Journey)
 ───────────────────────────────────────────── */
 .experience-journey {
-  height: 800vh; /* scroll length for the journey */
+  height: 1000vh; /* scroll length for the journey */
   position: relative;
 }
 .sticky-viewport {

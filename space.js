@@ -16,6 +16,17 @@
   viewport.insertBefore(canvas, viewport.firstChild);
   const ctx = canvas.getContext('2d');
 
+  // ── Create global debris canvas ──────────────────────────────────────
+  const dCanvas = document.createElement('canvas');
+  dCanvas.id = 'global-debris';
+  dCanvas.style.cssText = `
+    position: fixed; inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+  `;
+  document.body.appendChild(dCanvas);
+  const dCtx = dCanvas.getContext('2d');
+
   // ── Planet definitions (one per content stop) ────────────────────────
   const PLANETS = [
     { colors: ['#e8e0ff', '#9c7dfc', '#2a0a60'], ring: false, side: 0, lightAngle: Math.PI * 1.25 },   // Top-left
@@ -31,10 +42,50 @@
   let planetPositions = PLANETS.map((_, i) => i / (PLANETS.length - 1));
   const Z_SCALE = 10000;
 
+  let shatterParticles = [];
+  let globalDebris = [];
+  let hasExploded = false;
+  let lastTime = performance.now();
+
+  function triggerExplosion(projX, projY, pColor) {
+    if (hasExploded) return;
+    hasExploded = true;
+    
+    // 3D shatter particles (attached to the planet)
+    for (let i=0; i<80; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      const speed = 1000 + Math.random() * 4000;
+      shatterParticles.push({
+        dx: speed * Math.sin(phi) * Math.cos(theta),
+        dy: speed * Math.sin(phi) * Math.sin(theta),
+        dz: speed * Math.cos(phi),
+        r: Math.random() * 12 + 4,
+        color: pColor[Math.floor(Math.random() * pColor.length)],
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 10
+      });
+    }
+
+    // Foreground global falling debris (2D document space)
+    for (let i=0; i<50; i++) {
+      globalDebris.push({
+        x: projX,
+        y: window.scrollY + projY, 
+        vx: (Math.random() - 0.5) * 1400, 
+        vy: (Math.random() - 0.5) * 1400 - 800, 
+        rot: Math.random() * Math.PI * 2,
+        rotV: (Math.random() - 0.5) * 8,
+        color: pColor[Math.floor(Math.random() * pColor.length)],
+        r: Math.random() * 10 + 4
+      });
+    }
+  }
+
   // ── Resize ────────────────────────────────────────────────────────────
   function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+    W = canvas.width = dCanvas.width = window.innerWidth;
+    H = canvas.height = dCanvas.height = window.innerHeight;
   }
 
   function docTop(el) {
@@ -150,18 +201,26 @@
   function render() {
     ctx.clearRect(0, 0, W, H);
 
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
     const expTop = docTop(expSection);
     const expHeight = Math.max(1, expSection.offsetHeight - window.innerHeight);
     const progressRaw = (scrollY - expTop) / expHeight;
     const progress = Math.max(0, Math.min(1, progressRaw));
 
+    // 0 to 0.8 maps to the physical 3D space journey
+    const journeyProgress = Math.max(0, Math.min(1, progress / 0.8));
+    const shakeT = Math.max(0, Math.min(1, (progress - 0.8) / 0.1));
+    const explosionT = Math.max(0, Math.min(1, (progress - 0.9) / 0.1));
+
     // Apply a sine-wave easing to slow down the camera near each planet.
-    // This creates a "locked in place" scrollytelling effect.
     const segments = PLANETS.length - 1;
     const maxAmount = 1 / (2 * Math.PI * segments);
     const amount = maxAmount * 0.85; // 85% slowdown at the nodes
     
-    let easedProgress = progress - amount * Math.sin(progress * Math.PI * 2 * segments);
+    let easedProgress = journeyProgress - amount * Math.sin(journeyProgress * Math.PI * 2 * segments);
     const cameraZ = easedProgress * Z_SCALE;
 
     // 1. Calculate base 3D coordinates for all planets
@@ -199,14 +258,28 @@
       }
     }
 
+    // Shake Phase 
+    if (shakeT > 0 && explosionT === 0) {
+      const intensity = shakeT * 50; 
+      cameraX += (Math.random() - 0.5) * intensity;
+      cameraY += (Math.random() - 0.5) * intensity;
+      
+      // Screen flash
+      ctx.fillStyle = `rgba(255, 60, 0, ${shakeT * 0.12})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
     // 2. Progressive Connected Path Drawing
     ctx.save();
+    if (explosionT > 0) {
+      ctx.globalAlpha = Math.max(0, 1 - explosionT * 2); // Fade out quickly
+    }
     ctx.beginPath();
     ctx.strokeStyle = 'rgba(124, 92, 252, 0.4)';
     ctx.lineWidth = 3;
     ctx.setLineDash([15, 15]);
 
-    const lookahead = 1000; // How far ahead of the camera the line progressively draws
+    const lookahead = 800; // How far ahead of the camera the line progressively draws
     const maxDrawZ = cameraZ + lookahead;
 
     let startedPath = false;
@@ -270,6 +343,8 @@
     const planetsToDraw = [];
 
     planet3D.forEach((p, i) => {
+      if (i === planet3D.length - 1 && explosionT > 0) return; // Hide exploding planet
+
       const proj = project(p.x3d, p.y3d, p.z3d, cameraX, cameraY, cameraZ);
       if (!proj || proj.deltaZ < -1500 || proj.deltaZ > 8000) return;
 
@@ -299,6 +374,37 @@
       drawPlanet(item.proj.x, item.proj.y, item.r, item.p.colors, item.p.ring, Math.max(0, item.alpha), item.p.lightAngle);
     });
 
+    // Draw 3D shatter pieces for the last planet
+    if (explosionT > 0) {
+      const lastP = planet3D[planet3D.length - 1];
+      const baseProj = project(lastP.x3d, lastP.y3d, lastP.z3d, cameraX, cameraY, cameraZ);
+      
+      if (!hasExploded && baseProj) {
+        triggerExplosion(baseProj.x, baseProj.y, lastP.colors);
+      }
+
+      const t = 1 - Math.pow(1 - explosionT, 3); // cubic ease out
+      shatterParticles.forEach(p => {
+        const px = lastP.x3d + p.dx * t;
+        const py = lastP.y3d + p.dy * t;
+        const pz = lastP.z3d + p.dz * t;
+
+        const proj = project(px, py, pz, cameraX, cameraY, cameraZ);
+        if (proj && proj.deltaZ > -1000) {
+          ctx.save();
+          ctx.translate(proj.x, proj.y);
+          ctx.rotate(p.rot + p.rotSpeed * t);
+          ctx.globalAlpha = Math.max(0, 1 - explosionT * 1.5); // fade out slightly faster
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          const s = p.r * proj.scale;
+          ctx.moveTo(-s, -s); ctx.lineTo(s, -s*0.5); ctx.lineTo(s*0.8, s); ctx.lineTo(-s*0.5, s*0.8);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+    }
+
     // Activate corresponding HTML content block
     contents.forEach((el, i) => {
       const p = planet3D[i];
@@ -315,12 +421,43 @@
       }
 
       // Content is active if it's the closest and within a certain Z threshold
-      if (i === activeIndex && Math.abs(closestDelta) < 2500) {
+      if (i === activeIndex && Math.abs(closestDelta) < 2500 && (i !== PLANETS.length - 1 || explosionT === 0)) {
         el.classList.add('active');
       } else {
         el.classList.remove('active');
       }
     });
+
+    // Global Debris Physics & Render
+    dCtx.clearRect(0, 0, W, H);
+    if (hasExploded) {
+      globalDebris.forEach(d => {
+        // gravity & drag
+        d.vy += 1200 * dt; 
+        d.vy *= 0.98; 
+        d.vx *= 0.98;
+        
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.rot += d.rotV * dt;
+
+        const screenY = d.y - window.scrollY;
+        
+        // Draw if on screen
+        if (screenY > -50 && screenY < H + 50) {
+          dCtx.save();
+          dCtx.translate(d.x, screenY);
+          dCtx.rotate(d.rot);
+          dCtx.fillStyle = d.color;
+          dCtx.globalAlpha = 0.9;
+          dCtx.beginPath();
+          const s = d.r;
+          dCtx.moveTo(-s, -s); dCtx.lineTo(s, -s*0.5); dCtx.lineTo(s*0.8, s); dCtx.lineTo(-s*0.5, s*0.8);
+          dCtx.fill();
+          dCtx.restore();
+        }
+      });
+    }
 
     requestAnimationFrame(render);
   }
