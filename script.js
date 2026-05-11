@@ -36,13 +36,15 @@ document.getElementById('year').textContent = new Date().getFullYear();
 })();
 
 // ─────────────────────────────────────────────
-// STARFIELD CANVAS
+// WARP STARFIELD CANVAS
 // ─────────────────────────────────────────────
 (function initStarfield() {
   const canvas = document.getElementById('starfield');
   const ctx    = canvas.getContext('2d');
   let W, H, stars = [];
-  const STAR_COUNT = 200;
+  const STAR_COUNT = 300;
+  let scrollSpeed = 0;
+  let lastScrollY = window.scrollY;
 
   function resize() {
     W = canvas.width  = window.innerWidth;
@@ -53,29 +55,58 @@ document.getElementById('year').textContent = new Date().getFullYear();
     stars = [];
     for (let i = 0; i < STAR_COUNT; i++) {
       stars.push({
-        x:     Math.random() * W,
-        y:     Math.random() * H,
-        r:     Math.random() * 1.4 + 0.2,
-        alpha: Math.random() * 0.7 + 0.1,
-        speed: Math.random() * 0.15 + 0.02,
-        twinkle: Math.random() * Math.PI * 2,
+        x: (Math.random() - 0.5) * 2000,
+        y: (Math.random() - 0.5) * 2000,
+        z: Math.random() * 2000,
       });
     }
   }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
-    const t = Date.now() / 1000;
+    
+    // Base speed + scroll speed
+    const currentSpeed = 2 + scrollSpeed * 20;
+    scrollSpeed *= 0.9; // decay
+
+    const cx = W / 2;
+    const cy = H / 2;
+
     for (const s of stars) {
-      s.twinkle += 0.01;
-      const a = s.alpha * (0.6 + 0.4 * Math.sin(s.twinkle));
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(200,210,255,${a})`;
-      ctx.fill();
+      s.z -= currentSpeed;
+
+      if (s.z <= 0) {
+        s.x = (Math.random() - 0.5) * 2000;
+        s.y = (Math.random() - 0.5) * 2000;
+        s.z = 2000;
+      }
+
+      const projX = cx + (s.x / s.z) * 800;
+      const projY = cy + (s.y / s.z) * 800;
+      
+      const prevZ = s.z + currentSpeed;
+      const prevProjX = cx + (s.x / prevZ) * 800;
+      const prevProjY = cy + (s.y / prevZ) * 800;
+
+      const alpha = 1 - (s.z / 2000);
+      
+      if (projX >= 0 && projX <= W && projY >= 0 && projY <= H) {
+        ctx.beginPath();
+        ctx.moveTo(prevProjX, prevProjY);
+        ctx.lineTo(projX, projY);
+        ctx.strokeStyle = `rgba(200, 210, 255, ${alpha})`;
+        ctx.lineWidth = Math.max(0.5, 3 * (1 - s.z / 2000));
+        ctx.stroke();
+      }
     }
     requestAnimationFrame(draw);
   }
+
+  window.addEventListener('scroll', () => {
+    const dy = Math.abs(window.scrollY - lastScrollY);
+    scrollSpeed = Math.min(20, scrollSpeed + dy * 0.05);
+    lastScrollY = window.scrollY;
+  }, { passive: true });
 
   window.addEventListener('resize', () => { resize(); createStars(); });
   resize();
@@ -84,26 +115,12 @@ document.getElementById('year').textContent = new Date().getFullYear();
 })();
 
 // ─────────────────────────────────────────────
-// PARALLAX STARFIELD ON SCROLL
-// ─────────────────────────────────────────────
-// Stars drift slightly as the user scrolls for a space-travel feel
-(function scrollParallax() {
-  const nebulae = document.querySelectorAll('.nebula');
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    nebulae.forEach((n, i) => {
-      const speed = (i + 1) * 0.04;
-      n.style.transform = `translateY(${y * speed}px)`;
-    });
-  }, { passive: true });
-})();
-
-// ─────────────────────────────────────────────
 // NAVBAR — scroll state & active link tracking
 // ─────────────────────────────────────────────
 (function initNav() {
   const navbar = document.getElementById('navbar');
   const navLinks = document.querySelectorAll('.nav-link');
+  // Need to handle standard sections and the new sticky section
   const sections = document.querySelectorAll('section[id]');
 
   window.addEventListener('scroll', () => {
@@ -118,8 +135,12 @@ document.getElementById('year').textContent = new Date().getFullYear();
     let current = '';
     sections.forEach(sec => {
       const top = sec.offsetTop - 100;
-      if (window.scrollY >= top) current = sec.id;
+      // If we are past the top of the section, and we haven't scrolled past its bottom
+      if (window.scrollY >= top && window.scrollY < top + sec.offsetHeight) {
+        current = sec.id;
+      }
     });
+    
     navLinks.forEach(link => {
       link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
     });

@@ -19,6 +19,9 @@
   <div class="nebula nebula-1"></div>
   <div class="nebula nebula-2"></div>
   <div class="nebula nebula-3"></div>
+  <div class="nebula nebula-4"></div>
+  <div class="nebula nebula-5"></div>
+  <div class="nebula nebula-6"></div>
 
   <!-- ── NAVBAR ── -->
   <nav id="navbar">
@@ -72,78 +75,84 @@
     </div>
   </section>
 
-  <!-- ── EXPERIENCE ── -->
-  <section id="experience" class="section">
-    <div class="container">
-      <div class="section-header reveal">
-        <span class="section-label">Career</span>
-        <h2>Experience</h2>
+  <!-- ── EXPERIENCE (Sticky Space Journey) ── -->
+  <section id="experience" class="experience-journey">
+    <div class="sticky-viewport" id="sticky-viewport">
+      <!-- space.js will attach canvas here -->
+      
+      <!-- Planet Content Overlays -->
+      <div class="planet-content intro-content active">
+        <div class="section-header">
+          <span class="section-label">Career</span>
+          <h2>Experience</h2>
+        </div>
+        <p class="pc-desc" style="max-width:400px;">Scroll to explore my professional journey across research labs and industry engineering.</p>
       </div>
-      <div class="timeline">
 
-        <div class="timeline-item reveal">
-          <div class="tl-dot"></div>
-          <div class="tl-card card">
-            <div class="tl-top">
-              <div>
-                <h3>UAV Collision Modeling Research Assistant</h3>
-                <p class="tl-company">RISE Lab at ASU</p>
-              </div>
-              <div class="tl-meta">
-                <span class="tag">Research</span>
-                <span class="tl-date">Dec 2025 – Present</span>
-              </div>
+      <div class="planet-content">
+        <div class="tl-card card">
+          <div class="tl-top">
+            <div>
+              <h3>UAV Collision Modeling Research Assistant</h3>
+              <p class="tl-company">RISE Lab at ASU</p>
             </div>
-            <ul class="bullets">
-              <li>Integrated existing collision-inclusive algorithm into MuJoCo engine to capture complex contact dynamics that exceed capabilities of simple PMM simulations by 40%.</li>
-              <li>Implementing hybrid Model Predictive Control (MPC) framework using ROS2 pipeline that treats collisions as viable navigation strategies, benchmarking against collision-avoidance models.</li>
-              <li>Spearheading a pilot study to integrate vision-based navigation into MuJoCo using offscreen rendering for obstacle avoidance in GPS-denied scenarios.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="timeline-item reveal">
-          <div class="tl-dot"></div>
-          <div class="tl-card card">
-            <div class="tl-top">
-              <div>
-                <h3>Embedded Systems Engineering Intern</h3>
-                <p class="tl-company">Garmin</p>
-              </div>
-              <div class="tl-meta">
-                <span class="tag">Internship</span>
-                <span class="tl-date">Jan 2025 – Nov 2025</span>
-              </div>
+            <div class="tl-meta">
+              <span class="tag">Research</span>
+              <span class="tl-date">Dec 2025 – Present</span>
             </div>
-            <ul class="bullets">
-              <li>Developed TCP/IP-based intermediate simulation software for automated pilot interface testing, creating 20+ automated scripts that decreased manual testing hours by 40% and caught 90% of interface bugs pre-deployment.</li>
-              <li>Modified 60+ flight simulation test cases by refactoring Python logic and updating validation algorithms, improving code maintainability for integrated avionics systems.</li>
-              <li>Enhanced UI/UX and functionality for next-generation integrated flight deck models using C, XML, and JSON, resolving 40+ defects across pilot interfaces.</li>
-            </ul>
           </div>
+          <ul class="bullets">
+            <li>Integrated existing collision-inclusive algorithm into MuJoCo engine to capture complex contact dynamics that exceed capabilities of simple PMM simulations by 40%.</li>
+            <li>Implementing hybrid Model Predictive Control (MPC) framework using ROS2 pipeline that treats collisions as viable navigation strategies, benchmarking against collision-avoidance models.</li>
+            <li>Spearheading a pilot study to integrate vision-based navigation into MuJoCo using offscreen rendering for obstacle avoidance in GPS-denied scenarios.</li>
+          </ul>
         </div>
-
-        <div class="timeline-item reveal">
-          <div class="tl-dot"></div>
-          <div class="tl-card card">
-            <div class="tl-top">
-              <div>
-                <h3>Robotics Research Assistant</h3>
-                <p class="tl-company">Sun Robotics Lab at ASU</p>
-              </div>
-              <div class="tl-meta">
-                <span class="tag">Research</span>
-                <span class="tl-date">May 2024 – Dec 2024</span>
-              </div>
-            </div>
-            <ul class="bullets">
-              <li>Collaborated with Dr. Jiefeng Sun to construct a shape-morphing ROV with integrated robotic manipulation, reducing design iteration cycles by 50% through MuJoCo simulation.</li>
-              <li>Integrated ROS with onboard ArduSub system and Arduino boards/servos to provide real-time morphology control through asynchronous node architecture.</li>
-            </ul>
-          </div>
-        </div>
-
       </div>
+
+      <div class="planet-content">
+        <div class="tl-card card">
+          <div class="tl-top">
+            <div>
+              <h3>Embedded Systems Engineering Intern</h3>
+              <p class="tl-company">Garmin</p>
+            </div>
+            <div class="tl-meta">
+              <span class="tag">Internship</span>
+              <span class="tl-date">Jan 2025 – Nov 2025</span>
+            </div>
+          </div>
+          <ul class="bullets">
+            <li>Developed TCP/IP-based intermediate simulation software for automated pilot interface testing, creating 20+ automated scripts that decreased manual testing hours by 40% and caught 90% of interface bugs pre-deployment.</li>
+            <li>Modified 60+ flight simulation test cases by refactoring Python logic and updating validation algorithms, improving code maintainability for integrated avionics systems.</li>
+            <li>Enhanced UI/UX and functionality for next-generation integrated flight deck models using C, XML, and JSON, resolving 40+ defects across pilot interfaces.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="planet-content">
+        <div class="tl-card card">
+          <div class="tl-top">
+            <div>
+              <h3>Robotics Research Assistant</h3>
+              <p class="tl-company">Sun Robotics Lab at ASU</p>
+            </div>
+            <div class="tl-meta">
+              <span class="tag">Research</span>
+              <span class="tl-date">May 2024 – Dec 2024</span>
+            </div>
+          </div>
+          <ul class="bullets">
+            <li>Collaborated with Dr. Jiefeng Sun to construct a shape-morphing ROV with integrated robotic manipulation, reducing design iteration cycles by 50% through MuJoCo simulation.</li>
+            <li>Interfaced a localized ROS environment with an Arduino microcontroller and ArduSub physics engine to enable real-time morphology modifications.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="planet-content outro-content">
+        <h3>End of Journey</h3>
+        <p class="pc-desc">Keep scrolling to see my projects.</p>
+      </div>
+
     </div>
   </section>
 
@@ -383,5 +392,6 @@
   </footer>
 
   <script src="script.js"></script>
+  <script src="space.js"></script>
 </body>
 </html>
