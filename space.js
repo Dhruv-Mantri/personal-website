@@ -29,9 +29,6 @@
   let W, H;
   let scrollY = 0;
   let planetPositions = PLANETS.map((_, i) => i / (PLANETS.length - 1));
-  let warpSpeed = 0;      
-  let lastScrollY = 0;
-  let lastScrollTime = performance.now();
   const Z_SCALE = 10000;
 
   // ── Resize ────────────────────────────────────────────────────────────
@@ -132,29 +129,6 @@
     ctx.restore();
   }
 
-  // ── Warp streak effect ─────────────────────────────────
-  function drawWarpStreaks() {
-    if (warpSpeed < 0.08) return;
-    ctx.save();
-    ctx.globalAlpha = warpSpeed * 0.4;
-    const count = Math.floor(warpSpeed * 60);
-    for (let i = 0; i < count; i++) {
-      const sx = Math.random() * W;
-      const sy = Math.random() * H;
-      const len = 20 + Math.random() * 120 * warpSpeed;
-      const g = ctx.createLinearGradient(sx, sy, sx, sy + len);
-      g.addColorStop(0, 'rgba(200,210,255,0)');
-      g.addColorStop(0.5, 'rgba(200,210,255,0.7)');
-      g.addColorStop(1, 'rgba(200,210,255,0)');
-      ctx.strokeStyle = g;
-      ctx.lineWidth = Math.random() * 1.2 + 0.2;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + (Math.random() - 0.5) * 8, sy + len);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
 
   // Helper to project 3D to 2D
   function project(x3d, y3d, z3d, camX, camY, camZ) {
@@ -180,13 +154,6 @@
     const expHeight = Math.max(1, expSection.offsetHeight - window.innerHeight);
     const progressRaw = (scrollY - expTop) / expHeight;
     const progress = Math.max(0, Math.min(1, progressRaw));
-
-    warpSpeed *= 0.88;
-
-    // Only render warp if actively scrolling within section
-    if (progressRaw >= -0.2 && progressRaw <= 1.2) {
-      drawWarpStreaks();
-    }
 
     // Apply a sine-wave easing to slow down the camera near each planet.
     // This creates a "locked in place" scrollytelling effect.
@@ -360,17 +327,6 @@
 
   // ── Scroll tracking ───────────────────────────────────────────────────
   window.addEventListener('scroll', () => {
-    const now = performance.now();
-    const dt  = Math.max(1, now - lastScrollTime);
-    const dy  = Math.abs(window.scrollY - lastScrollY);
-    // Only apply warp speed if within the section
-    const expTop = docTop(expSection);
-    const expHeight = expSection.offsetHeight;
-    if (window.scrollY >= expTop - window.innerHeight && window.scrollY <= expTop + expHeight) {
-      warpSpeed = Math.min(1, warpSpeed + (dy / dt) * 0.8);
-    }
-    lastScrollY   = window.scrollY;
-    lastScrollTime = now;
     scrollY = window.scrollY;
   }, { passive: true });
 

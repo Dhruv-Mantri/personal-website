@@ -448,7 +448,6 @@ img { max-width: 100%; }
 .experience-journey {
   height: 800vh; /* scroll length for the journey */
   position: relative;
-  background: var(--bg);
 }
 .sticky-viewport {
   position: sticky;
