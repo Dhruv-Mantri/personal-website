@@ -18,11 +18,11 @@
 
   // ── Planet definitions (one per content stop) ────────────────────────
   const PLANETS = [
-    { colors: ['#e8e0ff', '#9c7dfc', '#2a0a60'], ring: false, side: 0 },   // Intro
-    { colors: ['#80deea', '#00838f', '#00212a'], ring: false, side: -1 },  // UAV
-    { colors: ['#ffcc80', '#e65100', '#2a1000'], ring: true, side: 1 },    // Garmin
-    { colors: ['#ef9a9a', '#b71c1c', '#1a0000'], ring: false, side: -1 },  // ROV
-    { colors: ['#ce93d8', '#7b1fa2', '#1a0030'], ring: false, side: 0 }    // Outro
+    { colors: ['#e8e0ff', '#9c7dfc', '#2a0a60'], ring: false, side: 0, lightAngle: Math.PI * 1.25 },   // Top-left
+    { colors: ['#80deea', '#00838f', '#00212a'], ring: false, side: -1, lightAngle: Math.PI * 1.7 },   // Top-right
+    { colors: ['#ffcc80', '#e65100', '#2a1000'], ring: true, side: 1, lightAngle: Math.PI * 0.8 },     // Bottom-left
+    { colors: ['#ef9a9a', '#b71c1c', '#1a0000'], ring: false, side: -1, lightAngle: Math.PI * 1.1 },   // Left
+    { colors: ['#ce93d8', '#7b1fa2', '#1a0030'], ring: false, side: 0, lightAngle: Math.PI * 1.5 }     // Top
   ];
 
   // ── State ─────────────────────────────────────────────────────────────
@@ -48,10 +48,13 @@
   }
 
   // ── Draw a single planet ──────────────────────────────────────────────
-  function drawPlanet(x, y, r, colors, ring, alpha) {
+  function drawPlanet(x, y, r, colors, ring, alpha, lightAngle = Math.PI * 1.25) {
     if (alpha < 0.01 || r < 1) return;
     ctx.save();
     ctx.globalAlpha = alpha;
+
+    const lx = Math.cos(lightAngle);
+    const ly = Math.sin(lightAngle);
 
     // outer atmospheric glow
     const glow = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 3.2);
@@ -78,8 +81,8 @@
 
     // planet body
     const body = ctx.createRadialGradient(
-      x - r * 0.3, y - r * 0.35, r * 0.05,
-      x + r * 0.1, y + r * 0.1, r
+      x + r * 0.4 * lx, y + r * 0.4 * ly, r * 0.05,
+      x - r * 0.1 * lx, y - r * 0.1 * ly, r
     );
     body.addColorStop(0,   colors[0]);
     body.addColorStop(0.45, colors[1]);
@@ -91,8 +94,8 @@
 
     // specular highlight
     const hi = ctx.createRadialGradient(
-      x - r * 0.38, y - r * 0.38, 0,
-      x - r * 0.15, y - r * 0.15, r * 0.7
+      x + r * 0.5 * lx, y + r * 0.5 * ly, 0,
+      x + r * 0.2 * lx, y + r * 0.2 * ly, r * 0.7
     );
     hi.addColorStop(0, 'rgba(255,255,255,0.28)');
     hi.addColorStop(1, 'rgba(255,255,255,0)');
@@ -103,8 +106,8 @@
 
     // terminator shadow
     const shadow = ctx.createRadialGradient(
-      x + r * 0.25, y + r * 0.25, r * 0.4,
-      x + r * 0.35, y + r * 0.35, r * 1.1
+      x - r * 0.35 * lx, y - r * 0.35 * ly, r * 0.4,
+      x - r * 0.50 * lx, y - r * 0.50 * ly, r * 1.1
     );
     shadow.addColorStop(0, 'rgba(0,0,0,0)');
     shadow.addColorStop(1, 'rgba(0,0,0,0.55)');
@@ -185,59 +188,61 @@
       drawWarpStreaks();
     }
 
-    const cameraZ = progress * Z_SCALE;
+    // Apply a sine-wave easing to slow down the camera near each planet.
+    // This creates a "locked in place" scrollytelling effect.
+    const segments = PLANETS.length - 1;
+    const maxAmount = 1 / (2 * Math.PI * segments);
+    const amount = maxAmount * 0.85; // 85% slowdown at the nodes
+    
+    let easedProgress = progress - amount * Math.sin(progress * Math.PI * 2 * segments);
+    const cameraZ = easedProgress * Z_SCALE;
 
     // 1. Calculate base 3D coordinates for all planets
     const planet3D = PLANETS.map((planet, i) => {
       return {
         ...planet,
-        x3d: planet.side * (W > 768 ? W * 0.35 : 0),
-        y3d: planet.side === 0 ? 0 : ((i % 2 === 0 ? 150 : -150) + (Math.sin(i) * 200)),
+        x3d: planet.side * (W > 768 ? W * 0.28 : 0),
+        y3d: planet.side === 0 ? 0 : ((i % 2 === 0 ? 50 : -50) + (Math.sin(i) * 50)),
         z3d: planetPositions[i] * Z_SCALE
       };
     });
 
-    // 2. Progressive Path Drawing
+    // 2. Full Connected Path Drawing
     ctx.save();
     ctx.beginPath();
-    let startedPath = false;
+    ctx.strokeStyle = 'rgba(124, 92, 252, 0.3)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([15, 15]);
 
     for (let i = 0; i < planet3D.length - 1; i++) {
-      const p1 = planet3D[i];
-      const p2 = planet3D[i+1];
+      let p1 = planet3D[i];
+      let p2 = planet3D[i+1];
 
-      // Draw segment between p1 and p2 if cameraZ is past p1.z3d
-      if (cameraZ > p1.z3d) {
-        // How much of this segment is drawn?
-        const segZ = Math.min(cameraZ, p2.z3d);
-        
-        // Calculate the 3D position of the "tip" of the drawing line
-        const t = (segZ - p1.z3d) / (p2.z3d - p1.z3d);
-        const tipX3D = p1.x3d + (p2.x3d - p1.x3d) * t;
-        const tipY3D = p1.y3d + (p2.y3d - p1.y3d) * t;
+      // If both planets are behind the camera's near plane, skip entirely
+      const nearZ = cameraZ - 990; // slightly in front of -fov
+      if (p2.z3d < nearZ) continue; 
+      
+      // If p1 is behind the near plane, interpolate a new starting point at the near plane
+      let startX = p1.x3d;
+      let startY = p1.y3d;
+      let startZ = p1.z3d;
+      
+      if (startZ < nearZ) {
+        const t = (nearZ - p1.z3d) / (p2.z3d - p1.z3d);
+        startX = p1.x3d + (p2.x3d - p1.x3d) * t;
+        startY = p1.y3d + (p2.y3d - p1.y3d) * t;
+        startZ = nearZ;
+      }
 
-        // Project p1
-        const proj1 = project(p1.x3d, p1.y3d, p1.z3d, cameraZ);
-        // Project Tip
-        const projTip = project(tipX3D, tipY3D, segZ, cameraZ);
+      const proj1 = project(startX, startY, startZ, cameraZ);
+      const proj2 = project(p2.x3d, p2.y3d, p2.z3d, cameraZ);
 
-        if (proj1 && projTip) {
-          if (!startedPath) {
-            ctx.moveTo(proj1.x, proj1.y);
-            startedPath = true;
-          } else {
-            ctx.lineTo(proj1.x, proj1.y);
-          }
-          ctx.lineTo(projTip.x, projTip.y);
-        }
+      if (proj1 && proj2) {
+        ctx.moveTo(proj1.x, proj1.y);
+        ctx.lineTo(proj2.x, proj2.y);
       }
     }
-    if (startedPath) {
-      ctx.strokeStyle = 'rgba(124, 92, 252, 0.4)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([15, 15]);
-      ctx.stroke();
-    }
+    ctx.stroke();
     ctx.restore();
 
     // 3. Draw planets & resolve HUD
@@ -258,8 +263,8 @@
       if (proj.deltaZ > 4000) {
         alpha = 1 - ((proj.deltaZ - 4000) / 4000);
       } else if (proj.deltaZ < 0) {
-        alpha = 1 - Math.min(1, -proj.deltaZ / 800);
-        r += -proj.deltaZ * 1.5; 
+        alpha = 1 - Math.min(1, -proj.deltaZ / 1500);
+        r += -proj.deltaZ * 1.0; 
       }
 
       planetsToDraw.push({ proj, p, alpha, r, index: i });
@@ -274,7 +279,7 @@
     // Z-sort planets
     planetsToDraw.sort((a, b) => b.proj.deltaZ - a.proj.deltaZ);
     planetsToDraw.forEach(item => {
-      drawPlanet(item.proj.x, item.proj.y, item.r, item.p.colors, item.p.ring, Math.max(0, item.alpha));
+      drawPlanet(item.proj.x, item.proj.y, item.r, item.p.colors, item.p.ring, Math.max(0, item.alpha), item.p.lightAngle);
     });
 
     // Activate corresponding HTML content block
@@ -283,12 +288,17 @@
       const proj = project(p.x3d, p.y3d, p.z3d, cameraZ);
       
       if (proj) {
-        el.style.left = proj.x + 'px';
+        let offsetX = 0;
+        if (W > 768) {
+          if (p.side === -1) offsetX = 280;
+          if (p.side === 1)  offsetX = -280;
+        }
+        el.style.left = (proj.x + offsetX) + 'px';
         el.style.top = proj.y + 'px';
       }
 
       // Content is active if it's the closest and within a certain Z threshold
-      if (i === activeIndex && Math.abs(closestDelta) < 1800) {
+      if (i === activeIndex && Math.abs(closestDelta) < 2500) {
         el.classList.add('active');
       } else {
         el.classList.remove('active');
