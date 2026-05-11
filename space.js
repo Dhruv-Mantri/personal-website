@@ -157,16 +157,16 @@
   }
 
   // Helper to project 3D to 2D
-  function project(x3d, y3d, z3d, cameraZ) {
-    const deltaZ = z3d - cameraZ;
+  function project(x3d, y3d, z3d, camX, camY, camZ) {
+    const deltaZ = z3d - camZ;
     const fov = 1000;
     // Don't render behind camera
     if (deltaZ < -fov) return null;
     const zDepth = Math.max(1, deltaZ + fov); 
     const scale = fov / zDepth;
     return {
-      x: W / 2 + (x3d * scale),
-      y: H / 2 + (y3d * scale),
+      x: W / 2 + ((x3d - camX) * scale),
+      y: H / 2 + ((y3d - camY) * scale),
       scale: scale,
       deltaZ: deltaZ
     };
@@ -201,32 +201,65 @@
     const planet3D = PLANETS.map((planet, i) => {
       return {
         ...planet,
-        x3d: planet.side * (W > 768 ? W * 0.28 : 0),
-        y3d: planet.side === 0 ? 0 : ((i % 2 === 0 ? 50 : -50) + (Math.sin(i) * 50)),
+        x3d: planet.side * (W > 768 ? W * 0.75 : 0),
+        y3d: planet.side === 0 ? 0 : ((i % 2 === 0 ? 100 : -100) + (Math.sin(i) * 100)),
         z3d: planetPositions[i] * Z_SCALE
       };
     });
 
-    // 2. Full Connected Path Drawing
+    // Calculate dynamic camera X and Y to follow the path loosely
+    let cameraX = 0;
+    let cameraY = 0;
+    
+    if (cameraZ <= planet3D[0].z3d) {
+      cameraX = planet3D[0].x3d * 0.6;
+      cameraY = planet3D[0].y3d * 0.6;
+    } else if (cameraZ >= planet3D[planet3D.length - 1].z3d) {
+      const last = planet3D[planet3D.length - 1];
+      cameraX = last.x3d * 0.6;
+      cameraY = last.y3d * 0.6;
+    } else {
+      for (let i = 0; i < planet3D.length - 1; i++) {
+        if (cameraZ >= planet3D[i].z3d && cameraZ <= planet3D[i+1].z3d) {
+          const p1 = planet3D[i];
+          const p2 = planet3D[i+1];
+          const t = (cameraZ - p1.z3d) / (p2.z3d - p1.z3d);
+          const smoothT = t * t * (3 - 2 * t);
+          cameraX = (p1.x3d + (p2.x3d - p1.x3d) * smoothT) * 0.6;
+          cameraY = (p1.y3d + (p2.y3d - p1.y3d) * smoothT) * 0.6;
+          break;
+        }
+      }
+    }
+
+    // 2. Progressive Connected Path Drawing
     ctx.save();
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(124, 92, 252, 0.3)';
+    ctx.strokeStyle = 'rgba(124, 92, 252, 0.4)';
     ctx.lineWidth = 3;
     ctx.setLineDash([15, 15]);
+
+    const lookahead = 1000; // How far ahead of the camera the line progressively draws
+    const maxDrawZ = cameraZ + lookahead;
+
+    let startedPath = false;
 
     for (let i = 0; i < planet3D.length - 1; i++) {
       let p1 = planet3D[i];
       let p2 = planet3D[i+1];
 
-      // If both planets are behind the camera's near plane, skip entirely
-      const nearZ = cameraZ - 990; // slightly in front of -fov
+      // If segment is entirely behind camera's near plane, skip
+      const nearZ = cameraZ - 990;
       if (p2.z3d < nearZ) continue; 
       
-      // If p1 is behind the near plane, interpolate a new starting point at the near plane
+      // If segment hasn't been reached by the drawing tip yet, skip
+      if (p1.z3d > maxDrawZ) continue;
+      
       let startX = p1.x3d;
       let startY = p1.y3d;
       let startZ = p1.z3d;
       
+      // Clamp start to near plane if it passed behind us
       if (startZ < nearZ) {
         const t = (nearZ - p1.z3d) / (p2.z3d - p1.z3d);
         startX = p1.x3d + (p2.x3d - p1.x3d) * t;
@@ -234,15 +267,32 @@
         startZ = nearZ;
       }
 
-      const proj1 = project(startX, startY, startZ, cameraZ);
-      const proj2 = project(p2.x3d, p2.y3d, p2.z3d, cameraZ);
+      // Clamp end to maxDrawZ for the progressive drawing effect
+      let endX = p2.x3d;
+      let endY = p2.y3d;
+      let endZ = p2.z3d;
+      
+      if (endZ > maxDrawZ) {
+        const t = (maxDrawZ - p1.z3d) / (p2.z3d - p1.z3d);
+        endX = p1.x3d + (p2.x3d - p1.x3d) * t;
+        endY = p1.y3d + (p2.y3d - p1.y3d) * t;
+        endZ = maxDrawZ;
+      }
+
+      const proj1 = project(startX, startY, startZ, cameraX, cameraY, cameraZ);
+      const proj2 = project(endX, endY, endZ, cameraX, cameraY, cameraZ);
 
       if (proj1 && proj2) {
-        ctx.moveTo(proj1.x, proj1.y);
+        if (!startedPath) {
+          ctx.moveTo(proj1.x, proj1.y);
+          startedPath = true;
+        } else {
+          ctx.lineTo(proj1.x, proj1.y);
+        }
         ctx.lineTo(proj2.x, proj2.y);
       }
     }
-    ctx.stroke();
+    if (startedPath) ctx.stroke();
     ctx.restore();
 
     // 3. Draw planets & resolve HUD
@@ -253,7 +303,7 @@
     const planetsToDraw = [];
 
     planet3D.forEach((p, i) => {
-      const proj = project(p.x3d, p.y3d, p.z3d, cameraZ);
+      const proj = project(p.x3d, p.y3d, p.z3d, cameraX, cameraY, cameraZ);
       if (!proj || proj.deltaZ < -1500 || proj.deltaZ > 8000) return;
 
       const baseRadius = Math.min(W, H) * 0.25; 
@@ -285,7 +335,7 @@
     // Activate corresponding HTML content block
     contents.forEach((el, i) => {
       const p = planet3D[i];
-      const proj = project(p.x3d, p.y3d, p.z3d, cameraZ);
+      const proj = project(p.x3d, p.y3d, p.z3d, cameraX, cameraY, cameraZ);
       
       if (proj) {
         let offsetX = 0;
