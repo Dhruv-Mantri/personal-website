@@ -167,13 +167,13 @@
       overlay.appendChild(nameClone);
 
       // Wait 1s for constellation to fade, then reveal names
-      setTimeout(() => { firstSpan.style.opacity = '1'; }, 1000);
-      setTimeout(() => { lastSpan.style.opacity = '1'; }, 2200);
+      setTimeout(() => { firstSpan.style.opacity = '1'; }, 3000);
+      setTimeout(() => { lastSpan.style.opacity = '1'; }, 4500);
       
       setTimeout(() => {
         phase = 'done';
         endSequence();
-      }, 5500); 
+      }, 7000); 
     }
 
     window.addEventListener('mousemove', (e) => {
@@ -328,7 +328,7 @@
         
         // Over 50 frames (~0.85s), fade everything except Polaris to 0
         let fadeOutAlpha = (phase === 'name_reveal') 
-          ? Math.max(0, 1 - (nameRevealTimer / 50)) 
+          ? Math.max(0, 1 - (nameRevealTimer / 130)) 
           : 1;
         
         let N = constelPoints.length;
