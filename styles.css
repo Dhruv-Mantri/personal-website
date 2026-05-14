@@ -44,6 +44,44 @@ svg { display: block; }
 img { max-width: 100%; }
 
 /* ─────────────────────────────────────────────
+   INTRO SEQUENCE
+───────────────────────────────────────────── */
+body.no-scroll {
+  overflow: hidden !important;
+}
+
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 1.5s ease;
+}
+
+#intro-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.flash-overlay.flash {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────
    STARFIELD CANVAS
 ───────────────────────────────────────────── */
 #starfield {
