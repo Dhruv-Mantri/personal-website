@@ -328,7 +328,7 @@
         
         // Over 50 frames (~0.85s), fade everything except Polaris to 0
         let fadeOutAlpha = (phase === 'name_reveal') 
-          ? Math.max(0, 1 - (nameRevealTimer / 130)) 
+          ? Math.max(0, 1 - (nameRevealTimer / 120)) 
           : 1;
         
         let N = constelPoints.length;
