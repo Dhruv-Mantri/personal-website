@@ -300,7 +300,7 @@
           else p.draw(ctx);
         }
       } 
-      else if (phase === 'constellation' || phase === 'zoom' || phase === 'typing') {
+      else if (phase === 'constellation' || phase === 'zoom' || phase === 'typing' || phase === 'name_reveal') {
         ctx.clearRect(0, 0, W, H);
         
         if (phase === 'zoom') {
