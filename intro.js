@@ -176,11 +176,55 @@
           setTimeout(() => {
             whiteFlash.classList.add('flash');
             
-            // Hold the flash for 2.5 seconds
+            // Create and position the clone
+            const heroName = document.querySelector('.hero-name');
+            const rect = heroName.getBoundingClientRect();
+            
+            const nameClone = heroName.cloneNode(false);
+            nameClone.style.position = 'absolute';
+            nameClone.style.top = rect.top + 'px';
+            nameClone.style.left = rect.left + 'px';
+            nameClone.style.width = rect.width + 'px';
+            nameClone.style.height = rect.height + 'px';
+            nameClone.style.margin = '0';
+            nameClone.style.animation = 'none';
+            nameClone.style.zIndex = '10001';
+            nameClone.style.background = 'none';
+            nameClone.style.webkitTextFillColor = '#000';
+            nameClone.style.color = '#000';
+            
+            const firstSpan = document.createElement('span');
+            firstSpan.textContent = 'Dhruv';
+            firstSpan.style.opacity = '0';
+            firstSpan.style.transition = 'opacity 0.8s ease';
+            
+            const space = document.createTextNode(' ');
+            
+            const lastSpan = document.createElement('span');
+            lastSpan.textContent = 'Mantri';
+            lastSpan.style.opacity = '0';
+            lastSpan.style.transition = 'opacity 0.8s ease';
+
+            nameClone.appendChild(firstSpan);
+            nameClone.appendChild(space);
+            nameClone.appendChild(lastSpan);
+            overlay.appendChild(nameClone);
+
+            // Fade in first name
+            setTimeout(() => {
+              firstSpan.style.opacity = '1';
+            }, 2000);
+            
+            // Fade in last name after 1 second
+            setTimeout(() => {
+              lastSpan.style.opacity = '1';
+            }, 4000);
+            
+            // Hold the flash for 6 seconds total
             setTimeout(() => {
               phase = 'done';
               endSequence();
-            }, 2500); 
+            }, 6000); 
 
           }, 50); // 50ms delay for near-instant flash
         }
