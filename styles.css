@@ -478,6 +478,14 @@ img { max-width: 100%; }
 .intro-content, .outro-content {
   text-align: center;
 }
+.intro-content h2 {
+  background: none;
+  -webkit-text-fill-color: var(--bg-2);
+  color: var(--bg-2);
+}
+.intro-content .pc-desc, .outro-content .pc-desc {
+  margin: 0 auto;
+}
 .tl-card {
   padding: 2.5rem;
   background: rgba(7, 7, 20, 0.55);
