@@ -523,8 +523,8 @@ body.no-scroll {
 }
 .intro-content h2 {
   background: none;
-  -webkit-text-fill-color: var(--bg-2);
-  color: var(--bg-2);
+  -webkit-text-fill-color: var(--text-1);
+  color: var(--text-1);
 }
 .intro-content .pc-desc, .outro-content .pc-desc {
   margin: 0 auto;
@@ -576,6 +576,7 @@ body.no-scroll {
 ───────────────────────────────────────────── */
 .projects-scroll-wrapper {
   position: relative;
+  width: 100%;
 }
 .projects-grid {
   display: flex;
@@ -583,31 +584,29 @@ body.no-scroll {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  padding: 0.5rem 0.25rem 1.5rem;
-  /* hide default scrollbar on Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent) rgba(255,255,255,0.05);
+  padding-top: 0.5rem;
+  padding-bottom: 1.5rem;
+  padding-left: max(1.5rem, calc((100% - 1100px) / 2 + 1.5rem));
+  /* hide scrollbar */
+  scrollbar-width: none;
 }
-/* Webkit scrollbar */
+.projects-grid::after {
+  content: '';
+  flex: 0 0 calc(max(1.5rem, calc((100% - 1100px) / 2 + 1.5rem)) - 1.5rem);
+}
 .projects-grid::-webkit-scrollbar {
-  height: 5px;
-}
-.projects-grid::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.04);
-  border-radius: 999px;
-}
-.projects-grid::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  border-radius: 999px;
+  display: none;
 }
 .project-card {
-  flex: 0 0 320px;
+  flex: 0 0 350px;
   scroll-snap-align: start;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   cursor: default;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
 }
 .pc-top {
   display: flex;
@@ -615,40 +614,7 @@ body.no-scroll {
   align-items: center;
 }
 
-/* Scroll arrows */
-.scroll-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-60%);
-  z-index: 10;
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--border-h);
-  background: rgba(7,7,15,0.85);
-  backdrop-filter: blur(8px);
-  color: var(--text-1);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition);
-  opacity: 0.7;
-}
-.scroll-arrow svg { width: 18px; height: 18px; }
-.scroll-arrow:hover {
-  opacity: 1;
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 20px var(--accent-glow);
-  transform: translateY(-60%) scale(1.1);
-}
-.scroll-arrow:disabled {
-  opacity: 0.2;
-  cursor: default;
-  pointer-events: none;
-}
-.scroll-arrow-left  { left: -20px; }
-.scroll-arrow-right { right: -20px; }
+/* Removed Scroll Arrows */
 .pc-icon { font-size: 1.8rem; }
 .pc-links { display: flex; gap: 0.5rem; }
 .pc-title {

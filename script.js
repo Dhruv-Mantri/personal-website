@@ -4,35 +4,55 @@
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // ─────────────────────────────────────────────
-// PROJECT CAROUSEL ARROWS
+// PROJECT CAROUSEL SCROLL (Hover edge)
 // ─────────────────────────────────────────────
-(function initCarouselArrows() {
+(function initCarouselScroll() {
+  const wrapper = document.querySelector('.projects-scroll-wrapper');
   const grid = document.getElementById('projects-grid');
-  const prev = document.getElementById('proj-prev');
-  const next = document.getElementById('proj-next');
-  if (!grid || !prev || !next) return;
+  if (!wrapper || !grid) return;
 
-  const CARD_W = () => {
-    const card = grid.querySelector('.project-card');
-    if (!card) return 340;
-    return card.offsetWidth + 24; // card + gap
-  };
+  // Edge Hover Continuous Scroll
+  let scrollInterval = null;
+  let scrollSpeed = 0;
 
-  function updateArrows() {
-    prev.disabled = grid.scrollLeft <= 4;
-    next.disabled = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 4;
+  wrapper.addEventListener('mousemove', (e) => {
+    // We only want to scroll if the grid is scrollable
+    if (grid.scrollWidth <= grid.clientWidth) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    const edgeThreshold = window.innerWidth > 768 ? 150 : 80;
+
+    if (x < edgeThreshold) {
+      // Near left edge
+      const intensity = (edgeThreshold - x) / edgeThreshold;
+      scrollSpeed = -intensity * 15; // Max speed
+    } else if (x > width - edgeThreshold) {
+      // Near right edge
+      const intensity = (x - (width - edgeThreshold)) / edgeThreshold;
+      scrollSpeed = intensity * 15;
+    } else {
+      scrollSpeed = 0;
+    }
+
+    if (scrollSpeed !== 0 && !scrollInterval) {
+      scrollInterval = requestAnimationFrame(scrollLoop);
+    }
+  });
+
+  wrapper.addEventListener('mouseleave', () => {
+    scrollSpeed = 0;
+  });
+
+  function scrollLoop() {
+    if (scrollSpeed === 0) {
+      scrollInterval = null;
+      return;
+    }
+    grid.scrollLeft += scrollSpeed;
+    scrollInterval = requestAnimationFrame(scrollLoop);
   }
-
-  prev.addEventListener('click', () => {
-    grid.scrollBy({ left: -CARD_W(), behavior: 'smooth' });
-  });
-  next.addEventListener('click', () => {
-    grid.scrollBy({ left:  CARD_W(), behavior: 'smooth' });
-  });
-
-  grid.addEventListener('scroll', updateArrows, { passive: true });
-  window.addEventListener('resize', updateArrows);
-  updateArrows();
 })();
 
 // ─────────────────────────────────────────────

@@ -5,7 +5,7 @@
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
 
-  const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+  const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes
   const lastPlayed = sessionStorage.getItem('lastIntroPlayed');
   const now = Date.now();
 
@@ -15,7 +15,7 @@
   if (!overlay || !whiteFlash) return;
 
   if (lastPlayed && (now - parseInt(lastPlayed, 10)) < COOLDOWN_MS) {
-    // Skip intro if within 5 mins
+    // Skip intro if within 30 mins
     skipIntro();
     return;
   }
