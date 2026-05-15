@@ -1,5 +1,10 @@
 /* ─── intro.js ─── */
 (function() {
+  // Always force the page to the very top before anything renders
+  // This prevents the browser's scroll-restoration from starting mid-page
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+
   const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
   const lastPlayed = sessionStorage.getItem('lastIntroPlayed');
   const now = Date.now();
@@ -134,10 +139,13 @@
       canvas.style.pointerEvents = 'none';
       
       const heroName = document.querySelector('.hero-name');
+      // getBoundingClientRect is only reliable when the page is at scroll=0.
+      // We force scroll to top before computing so the clone is always on-screen.
+      window.scrollTo(0, 0);
       const rect = heroName.getBoundingClientRect();
       
       const nameClone = heroName.cloneNode(false);
-      nameClone.style.position = 'absolute';
+      nameClone.style.position = 'fixed'; // fixed instead of absolute so it tracks viewport, not overlay scroll
       nameClone.style.top = rect.top + 'px';
       nameClone.style.left = rect.left + 'px';
       nameClone.style.width = rect.width + 'px';
