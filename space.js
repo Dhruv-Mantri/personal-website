@@ -82,10 +82,121 @@
     }
   }
 
+  // ── Create the Three.js canvas ────────────────────────────────────────
+  const threeCanvas = document.createElement('canvas');
+  threeCanvas.id = 'three-journey';
+  threeCanvas.style.cssText = `
+    position: absolute; inset: 0;
+    z-index: 2; /* above 2D canvas, below DOM content */
+    pointer-events: none;
+  `;
+  viewport.insertBefore(threeCanvas, canvas.nextSibling);
+
+  const scene = new THREE.Scene();
+  // Simple centered orthographic camera.
+  // Camera sits at z=50, looking toward z=0 where all meshes live.
+  // Frustum: near=1, far=100 => visible range z=[49, -50].
+  // Mesh at z=0 is exactly 50 units in front. Unambiguously within frustum.
+  const W0 = window.innerWidth, H0 = window.innerHeight;
+  // Camera at z=5000. Meshes at z=0. Distance = 5000 units.
+  // Planet radius r is in pixels (max ~300px). Scale is set to r in Three.js units.
+  // The camera can NEVER clip into the sphere because 5000 >> any r value.
+  const camera = new THREE.OrthographicCamera(-W0/2, W0/2, H0/2, -H0/2, 1, 10000);
+  camera.position.z = 5000;
+  const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+  dirLight.position.set(-1, -1, 1);
+  scene.add(dirLight);
+
+  const textureLoader = new THREE.TextureLoader();
+  const PLANET_DATA = [
+    { tex: 'textures/2k_neptune.jpg', ring: false, emissive: 0, color: 0x00838f },
+    { tex: 'textures/8k_mars.jpg', ring: false, emissive: 0, color: 0xb71c1c },
+    { tex: 'textures/8k_saturn.jpg', ring: 'textures/8k_saturn_ring_alpha.png', emissive: 0, color: 0xe65100 },
+    { tex: 'textures/8k_jupiter.jpg', ring: false, emissive: 0, color: 0x80deea },
+    { tex: 'textures/8k_sun.jpg', ring: false, emissive: 1, color: 0xffcc80 } // Sun glows
+  ];
+
+  const planetMeshes = PLANET_DATA.map((data, i) => {
+    const group = new THREE.Group();
+    const geo = new THREE.SphereGeometry(1, 64, 64);
+    
+    const tex = textureLoader.load(data.tex);
+    tex.encoding = THREE.sRGBEncoding;
+
+    const matArgs = {
+      color: new THREE.Color(data.color), // Fallback if texture fails
+      map: tex,
+      roughness: 0.6,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 1
+    };
+    if (data.emissive) {
+      matArgs.emissiveMap = tex;
+      matArgs.emissive = new THREE.Color(0xffffff);
+      matArgs.emissiveIntensity = 1.0;
+    }
+    
+    const mat = new THREE.MeshStandardMaterial(matArgs);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.z = Math.PI * 0.1; // axial tilt
+    group.add(mesh);
+    
+    if (data.ring) {
+      // Create a ring geometry with custom UVs so the texture wraps correctly
+      const ringGeo = new THREE.RingGeometry(1.2, 2.2, 64);
+      const pos = ringGeo.attributes.position;
+      const uvs = ringGeo.attributes.uv;
+      for (let j = 0; j < pos.count; j++) {
+        const x = pos.getX(j);
+        const y = pos.getY(j);
+        const len = Math.sqrt(x*x + y*y);
+        // Map inner radius (1.2) to u=0, outer radius (2.2) to u=1
+        uvs.setXY(j, (len - 1.2) / (2.2 - 1.2), 0.5);
+      }
+      ringGeo.attributes.uv.needsUpdate = true;
+
+      const ringTex = textureLoader.load(data.ring);
+      ringTex.encoding = THREE.sRGBEncoding;
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: ringTex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.9,
+        roughness: 0.8
+      });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 2 - 0.2; // tilt the ring
+      group.add(ringMesh);
+    }
+    
+    group.visible = false;
+    scene.add(group);
+    return group;
+  });
+
   // ── Resize ────────────────────────────────────────────────────────────
   function resize() {
     W = canvas.width = dCanvas.width = window.innerWidth;
     H = canvas.height = dCanvas.height = window.innerHeight;
+    
+    if (typeof camera !== 'undefined') {
+      camera.left   = -W/2;
+      camera.right  =  W/2;
+      camera.top    =  H/2;
+      camera.bottom = -H/2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(W, H);
+    }
   }
 
   function docTop(el) {
@@ -95,14 +206,11 @@
     return top;
   }
 
-  // ── Draw a single planet ──────────────────────────────────────────────
-  function drawPlanet(x, y, r, colors, ring, alpha, lightAngle = Math.PI * 1.25) {
+  // ── Draw a single planet's glow ───────────────────────────────────────
+  function drawPlanetGlow(x, y, r, colors, alpha) {
     if (alpha < 0.01 || r < 1) return;
     ctx.save();
     ctx.globalAlpha = alpha;
-
-    const lx = Math.cos(lightAngle);
-    const ly = Math.sin(lightAngle);
 
     // outer atmospheric glow
     const glow = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 3.2);
@@ -113,69 +221,6 @@
     ctx.beginPath();
     ctx.arc(x, y, r * 3.2, 0, Math.PI * 2);
     ctx.fill();
-
-    // ring — back half
-    if (ring) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(1, 0.3);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, r * 2.0, r * 2.0, 0, Math.PI * 0.05, Math.PI * 1.05);
-      ctx.strokeStyle = colors[0] + '60';
-      ctx.lineWidth = r * 0.32;
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // planet body
-    const body = ctx.createRadialGradient(
-      x + r * 0.4 * lx, y + r * 0.4 * ly, r * 0.05,
-      x - r * 0.1 * lx, y - r * 0.1 * ly, r
-    );
-    body.addColorStop(0,   colors[0]);
-    body.addColorStop(0.45, colors[1]);
-    body.addColorStop(1,   colors[2]);
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // specular highlight
-    const hi = ctx.createRadialGradient(
-      x + r * 0.5 * lx, y + r * 0.5 * ly, 0,
-      x + r * 0.2 * lx, y + r * 0.2 * ly, r * 0.7
-    );
-    hi.addColorStop(0, 'rgba(255,255,255,0.28)');
-    hi.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = hi;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // terminator shadow
-    const shadow = ctx.createRadialGradient(
-      x - r * 0.35 * lx, y - r * 0.35 * ly, r * 0.4,
-      x - r * 0.50 * lx, y - r * 0.50 * ly, r * 1.1
-    );
-    shadow.addColorStop(0, 'rgba(0,0,0,0)');
-    shadow.addColorStop(1, 'rgba(0,0,0,0.55)');
-    ctx.fillStyle = shadow;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ring — front half
-    if (ring) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(1, 0.3);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, r * 2.0, r * 2.0, 0, Math.PI * 1.05, Math.PI * 2.05);
-      ctx.strokeStyle = colors[0] + '80';
-      ctx.lineWidth = r * 0.32;
-      ctx.stroke();
-      ctx.restore();
-    }
 
     ctx.restore();
   }
@@ -370,9 +415,45 @@
 
     // Z-sort planets
     planetsToDraw.sort((a, b) => b.proj.deltaZ - a.proj.deltaZ);
+    
+    planetMeshes.forEach(m => m.visible = false);
+
     planetsToDraw.forEach(item => {
-      drawPlanet(item.proj.x, item.proj.y, item.r, item.p.colors, item.p.ring, Math.max(0, item.alpha), item.p.lightAngle);
+      // Draw 2D glow
+      drawPlanetGlow(item.proj.x, item.proj.y, item.r, item.p.colors, Math.max(0, item.alpha));
+      
+      // Update Three.js mesh.
+      // Convert screen-space (proj.x, proj.y) to centered camera space:
+      //   cameraX = proj.x - W/2   (screen center -> 0)
+      //   cameraY = -(proj.y - H/2) (flip Y: screen top=0 -> camera top=+H/2)
+      // Mesh lives at z=0, camera at z=50 => 50 units in front, within frustum.
+      const pGroup = planetMeshes[item.index];
+      pGroup.visible = true;
+      pGroup.position.set(item.proj.x - W/2, -(item.proj.y - H/2), 0);
+      pGroup.scale.set(item.r, item.r, item.r);
+      
+      // Rotate planet
+      pGroup.children[0].rotation.y += dt * 0.15;
+      if (pGroup.children.length > 1) { // ring
+        pGroup.children[1].rotation.z -= dt * 0.1;
+      }
+      
+      // Exploding planet fade out
+      let opacity = Math.max(0, item.alpha);
+      if (item.index === planet3D.length - 1 && explosionT > 0) {
+        opacity *= Math.max(0, 1 - Math.pow(explosionT, 0.5)); // fast fade out
+      }
+      
+      pGroup.children.forEach(child => {
+        if (child.geometry.type === 'RingGeometry') {
+          child.material.opacity = 0.9 * opacity;
+        } else {
+          child.material.opacity = opacity;
+        }
+      });
     });
+
+    renderer.render(scene, camera);
 
     // Draw 3D shatter pieces for the last planet
     if (explosionT > 0) {
