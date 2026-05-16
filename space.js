@@ -33,7 +33,7 @@
     { colors: ['#80deea', '#00838f', '#00212a'], ring: false, side: -1, lightAngle: Math.PI * 1.7 },   // Top-right
     { colors: ['#ffcc80', '#e65100', '#2a1000'], ring: true, side: 1, lightAngle: Math.PI * 0.8 },     // Bottom-left
     { colors: ['#ef9a9a', '#b71c1c', '#1a0000'], ring: false, side: -1, lightAngle: Math.PI * 1.1 },   // Left
-    { colors: ['#ce93d8', '#7b1fa2', '#1a0030'], ring: false, side: 0, lightAngle: Math.PI * 1.5 }     // Top
+    { colors: ['#fff176', '#ff6d00', '#b71c1c'], ring: false, side: 0, lightAngle: Math.PI * 1.5 }     // Sun
   ];
 
   // ── State ─────────────────────────────────────────────────────────────
@@ -310,7 +310,7 @@
       cameraY += (Math.random() - 0.5) * intensity;
       
       // Screen flash
-      ctx.fillStyle = `rgba(255, 60, 0, ${shakeT * 0.12})`;
+      ctx.fillStyle = `rgba(255, 160, 0, ${shakeT * 0.18})`;
       ctx.fillRect(0, 0, W, H);
     }
 
@@ -464,6 +464,27 @@
         triggerExplosion(baseProj.x, baseProj.y, lastP.colors);
       }
 
+      // Solar burst flash — a radial bloom at the explosion epicentre
+      if (baseProj) {
+        const flashAlpha = Math.max(0, 1 - explosionT * 2.5);
+        if (flashAlpha > 0) {
+          const burstR = Math.min(W, H) * 0.35 * (1 + explosionT * 3);
+          const flash = ctx.createRadialGradient(baseProj.x, baseProj.y, 0, baseProj.x, baseProj.y, burstR);
+          flash.addColorStop(0,   `rgba(255, 255, 220, ${flashAlpha})`);
+          flash.addColorStop(0.15, `rgba(255, 210, 60, ${flashAlpha * 0.85})`);
+          flash.addColorStop(0.4,  `rgba(255, 100, 0, ${flashAlpha * 0.5})`);
+          flash.addColorStop(0.7,  `rgba(180, 30, 0, ${flashAlpha * 0.2})`);
+          flash.addColorStop(1,   'transparent');
+          ctx.save();
+          ctx.fillStyle = flash;
+          ctx.globalAlpha = 1;
+          ctx.beginPath();
+          ctx.arc(baseProj.x, baseProj.y, burstR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
       const t = 1 - Math.pow(1 - explosionT, 3); // cubic ease out
       shatterParticles.forEach(p => {
         const px = lastP.x3d + p.dx * t;
@@ -472,13 +493,25 @@
 
         const proj = project(px, py, pz, cameraX, cameraY, cameraZ);
         if (proj && proj.deltaZ > -1000) {
+          const particleAlpha = Math.max(0, 1 - explosionT * 1.5);
           ctx.save();
           ctx.translate(proj.x, proj.y);
           ctx.rotate(p.rot + p.rotSpeed * t);
-          ctx.globalAlpha = Math.max(0, 1 - explosionT * 1.5); // fade out slightly faster
+          ctx.globalAlpha = particleAlpha;
+          const s = p.r * proj.scale;
+          // Hot-core radial glow on each particle
+          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.5);
+          grad.addColorStop(0,   '#fffff0');  // white-hot core
+          grad.addColorStop(0.3, p.color);    // particle's assigned solar color
+          grad.addColorStop(1,   'transparent');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          // Shard shape on top
+          ctx.globalAlpha = particleAlpha * 0.8;
           ctx.fillStyle = p.color;
           ctx.beginPath();
-          const s = p.r * proj.scale;
           ctx.moveTo(-s, -s); ctx.lineTo(s, -s*0.5); ctx.lineTo(s*0.8, s); ctx.lineTo(-s*0.5, s*0.8);
           ctx.fill();
           ctx.restore();

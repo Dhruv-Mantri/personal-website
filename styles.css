@@ -364,6 +364,9 @@ body.no-scroll {
   display: flex;
   align-items: center;
   padding-top: var(--nav-h);
+  /* Fade the hero's bottom edge into the page background so there's no hard seam */
+  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
 }
 .hero-content {
   max-width: 1100px;
