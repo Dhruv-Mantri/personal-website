@@ -10,9 +10,8 @@
   const now = Date.now();
 
   const overlay = document.getElementById('intro-overlay');
-  const whiteFlash = document.getElementById('white-flash');
   
-  if (!overlay || !whiteFlash) return;
+  if (!overlay) return;
 
   if (lastPlayed && (now - parseInt(lastPlayed, 10)) < COOLDOWN_MS) {
     // Skip intro if within 30 mins
@@ -48,14 +47,7 @@
     window.addEventListener('resize', resize);
     resize();
 
-    let energy = 0;
     let phase = 'constellation'; 
-    let particles = [];
-    
-    let currentMouse = { x: W/2, y: H/2 };
-    let lastMouse = { x: W/2, y: H/2 };
-    let isMoving = false;
-    let moveTimeout = null;
 
     // Constellation state
     let constelPoints = [];
@@ -184,29 +176,7 @@
       }, 7000); 
     }
 
-    window.addEventListener('mousemove', (e) => {
-      if (phase !== 'buildup') return;
-      currentMouse.x = e.clientX;
-      currentMouse.y = e.clientY;
-      let dx = currentMouse.x - lastMouse.x;
-      let dy = currentMouse.y - lastMouse.y;
-      let dist = Math.sqrt(dx*dx + dy*dy);
-      
-      energy += dist * 0.08; 
-      if (energy > 500) energy = 500;
-
-      let spawnCount = Math.floor(Math.random() * 3) + 1 + Math.floor(energy * 0.05);
-      for (let i = 0; i < spawnCount; i++) {
-        particles.push(new Spark(currentMouse.x, currentMouse.y, energy));
-      }
-
-      lastMouse.x = currentMouse.x;
-      lastMouse.y = currentMouse.y;
-      
-      isMoving = true;
-      clearTimeout(moveTimeout);
-      moveTimeout = setTimeout(() => { isMoving = false; }, 100);
-    });
+    // No mousemove listener needed for buildup phase
 
     const advanceIntro = (e) => {
       let clientX = e.clientX;
@@ -245,86 +215,10 @@
       advanceIntro(e);
     }, { passive: false });
 
-    class Spark {
-      constructor(x, y, e) {
-        let spread = e * 0.5;
-        this.x = x + (Math.random() - 0.5) * spread;
-        this.y = y + (Math.random() - 0.5) * spread;
-        let speedMult = e * 0.05 + 1;
-        this.vx = (Math.random() - 0.5) * 4 * speedMult;
-        this.vy = (Math.random() - 0.5) * 4 * speedMult;
-        this.life = 1.0;
-        this.decay = Math.random() * 0.03 + 0.01 + ((100 - e) * 0.0002);
-        this.size = Math.random() * (e * 0.06 + 1) + 1;
-        let hue = Math.random() * 40 + 10; 
-        let light = 50 + (e * 0.5); 
-        this.color = `hsl(${hue}, 100%, ${light}%)`;
-      }
-      update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; }
-      draw(ctx) {
-        ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1.0;
-      }
-    }
-
-    class ExplosionParticle {
-      constructor(x, y) {
-        this.x = x; this.y = y;
-        let angle = Math.random() * Math.PI * 2;
-        let speed = Math.random() * 30 + 10;
-        this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed;
-        this.size = Math.random() * 6 + 2;
-        const colors = ['#ffffff', '#ffffff', '#00d4ff', '#7c5cfc'];
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.life = 1.0; this.decay = Math.random() * 0.015 + 0.005;
-      }
-      update() { this.x += this.vx; this.y += this.vy; this.size *= 0.96; this.life -= this.decay; }
-      draw(ctx) {
-        if (this.life <= 0) return;
-        ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1.0;
-      }
-    }
-
     initConstellation();
-    canvas.classList.add('above-flash');
 
     function render() {
-      if (phase === 'buildup' || phase === 'explosion') {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(0, 0, W, H);
-
-        if (phase === 'buildup') {
-          if (!isMoving) { energy -= 0.4; if (energy < 0) energy = 0; }
-          if (energy > 10) {
-            let ambientCount = Math.floor(energy / 15);
-            for (let i = 0; i < ambientCount; i++) particles.push(new Spark(currentMouse.x, currentMouse.y, energy));
-          }
-
-          if (energy >= 500) {
-            phase = 'explosion';
-            for (let i = 0; i < 600; i++) particles.push(new ExplosionParticle(currentMouse.x, currentMouse.y));
-            
-            setTimeout(() => {
-              whiteFlash.classList.add('flash');
-              setTimeout(() => {
-                phase = 'constellation';
-                canvas.classList.add('above-flash');
-                initConstellation();
-              }, 500); 
-            }, 50); 
-          }
-        }
-
-        for (let i = particles.length - 1; i >= 0; i--) {
-          let p = particles[i]; p.update();
-          if (p.life <= 0 || p.size <= 0.1) particles.splice(i, 1);
-          else p.draw(ctx);
-        }
-      } 
-      else if (phase === 'constellation' || phase === 'zoom' || phase === 'typing' || phase === 'name_reveal') {
+      if (phase === 'constellation' || phase === 'zoom' || phase === 'typing' || phase === 'name_reveal') {
         ctx.clearRect(0, 0, W, H);
         
         if (phase === 'zoom') {
