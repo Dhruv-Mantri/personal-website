@@ -49,7 +49,7 @@
     resize();
 
     let energy = 0;
-    let phase = 'buildup'; 
+    let phase = 'constellation'; 
     let particles = [];
     
     let currentMouse = { x: W/2, y: H/2 };
@@ -208,12 +208,20 @@
       moveTimeout = setTimeout(() => { isMoving = false; }, 100);
     });
 
-    canvas.addEventListener('click', (e) => {
+    const advanceIntro = (e) => {
+      let clientX = e.clientX;
+      let clientY = e.clientY;
+
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+
       if (phase === 'constellation' && constelTimer > 410) { // 19 points * 10 + 40 + 18 lines * 10
         let screenX = (polarisPos.x - camX) * camScale;
         let screenY = (polarisPos.y - camY) * camScale;
-        let dx = e.clientX - screenX;
-        let dy = e.clientY - screenY;
+        let dx = clientX - screenX;
+        let dy = clientY - screenY;
         if (Math.sqrt(dx*dx + dy*dy) < 60) {
           phase = 'zoom';
           targetCamScale = 2.5;
@@ -230,7 +238,12 @@
           showNameCutscene();
         }
       }
-    });
+    };
+    canvas.addEventListener('click', advanceIntro);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      advanceIntro(e);
+    }, { passive: false });
 
     class Spark {
       constructor(x, y, e) {
@@ -274,6 +287,9 @@
         ctx.globalAlpha = 1.0;
       }
     }
+
+    initConstellation();
+    canvas.classList.add('above-flash');
 
     function render() {
       if (phase === 'buildup' || phase === 'explosion') {
