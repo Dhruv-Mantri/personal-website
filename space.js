@@ -29,11 +29,11 @@
 
   // ── Planet definitions (one per content stop) ────────────────────────
   const PLANETS = [
-    { colors: ['#e8e0ff', '#9c7dfc', '#2a0a60'], ring: false, side: 0, lightAngle: Math.PI * 1.25 },   // Top-left
-    { colors: ['#80deea', '#00838f', '#00212a'], ring: false, side: -1, lightAngle: Math.PI * 1.7 },   // Top-right
-    { colors: ['#ffcc80', '#e65100', '#2a1000'], ring: true, side: 1, lightAngle: Math.PI * 0.8 },     // Bottom-left
-    { colors: ['#ef9a9a', '#b71c1c', '#1a0000'], ring: false, side: -1, lightAngle: Math.PI * 1.1 },   // Left
-    { colors: ['#fff176', '#ff6d00', '#b71c1c'], ring: false, side: 0, lightAngle: Math.PI * 1.5 }     // Sun
+    { colors: ['#f3e8ff', '#c084fc', '#581c87'], ring: false, side: 0, lightAngle: Math.PI * 1.25 },   // Top-left
+    { colors: ['#e0e7ff', '#818cf8', '#312e81'], ring: false, side: -1, lightAngle: Math.PI * 1.7 },   // Top-right
+    { colors: ['#fae8ff', '#d946ef', '#701a75'], ring: true, side: 1, lightAngle: Math.PI * 0.8 },     // Bottom-left
+    { colors: ['#f5f3ff', '#a78bfa', '#4c1d95'], ring: false, side: -1, lightAngle: Math.PI * 1.1 },   // Left
+    { colors: ['#fffbeb', '#fde047', '#a16207'], ring: false, side: 0, lightAngle: Math.PI * 1.5 }     // Sun
   ];
 
   // ── State ─────────────────────────────────────────────────────────────

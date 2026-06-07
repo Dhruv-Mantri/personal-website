@@ -114,7 +114,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
         ctx.beginPath();
         ctx.moveTo(prevProjX, prevProjY);
         ctx.lineTo(projX, projY);
-        ctx.strokeStyle = `rgba(200, 210, 255, ${alpha})`;
+        ctx.strokeStyle = `rgba(150, 150, 155, ${alpha})`;
         ctx.lineWidth = Math.max(0.5, 3 * (1 - s.z / 2000));
         ctx.stroke();
       }
